@@ -41,8 +41,8 @@ pub fn tier_to_name(level: u64) -> Option<String> {
 pub fn class_to_name(class: u64, decoration: &str) -> Option<String> {
     let decoration = match decoration {
         "none" => Some(""),
-        "silver" => Some("+"),
-        "gold" => Some("++"),
+        "silver" => Some(r"\+"),
+        "gold" => Some(r"\+\+"),
         _ => None,
     };
     decoration.map(|decoration| format!("{}{}", class, decoration))
