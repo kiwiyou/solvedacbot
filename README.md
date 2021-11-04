@@ -1,4 +1,7 @@
-<div align="center"><h1><code>solvedacbot</code></h1></div>
+<div align="center">
+  <h1><code>solvedacbot</code></h1>
+  <p><a href="https://github.com/kiwiyou/solvedacbot/actions/workflows/deploy.yml"><img src="https://github.com/kiwiyou/solvedacbot/actions/workflows/deploy.yml/badge.svg" alt="Deploy"></a></p>
+</div>
 
 solvedacbot은 [solved.ac](https://solved.ac)의 기능을 텔레그램에서 쉽게 이용할 수 있도록 하는 봇입니다.
 
