@@ -28,12 +28,12 @@ pub fn level_to_name(level: u64) -> Option<String> {
 pub fn tier_to_name(level: u64) -> Option<String> {
     match level {
         0 => Some("Unranked".to_string()),
-        1..=29 => Some(format!(
+        1..=30 => Some(format!(
             "{} {}",
             ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Ruby"][(level as usize - 1) / 5],
             ["V", "IV", "III", "II", "I"][(level as usize - 1) % 5]
         )),
-        30 => Some("Master".to_string()),
+        31 => Some("Master".to_string()),
         _ => None,
     }
 }
@@ -135,11 +135,7 @@ pub fn problem_show_to_message(chat_id: i64, result: &[Map<String, Value>]) -> S
 
 pub fn user_show_to_message(chat_id: i64, result: Map<String, Value>) -> SendPhoto {
     let handle = extract_str_or_na(&result, "handle");
-    let rank = result
-        .get("rank")
-        .and_then(Value::as_u64)
-        .map(|rank| format!(" \\({}위\\)", rank))
-        .unwrap_or_default();
+    let rank = extract_u64_or_na(&result, "rank");
     let tier = result
         .get("tier")
         .and_then(Value::as_u64)
@@ -156,18 +152,24 @@ pub fn user_show_to_message(chat_id: i64, result: Map<String, Value>) -> SendPho
     let solve_rating = extract_u64_or_na(&result, "ratingBySolvedCount");
     let vote_rating = extract_u64_or_na(&result, "ratingByVoteCount");
     let bio = extract_str_or_na(&result, "bio");
+    let bio = if bio.is_empty() {
+        "".to_string()
+    } else {
+        format!("_{}_\n\n", escape_markdown_v2(bio))
+    };
+    let solve_count = extract_u64_or_na(&result, "solvedCount");
+    let vote_count = extract_u64_or_na(&result, "voteCount");
+    let rival_count = extract_u64_or_na(&result, "rivalCount");
     let profile_image = result
         .get("profileImageUrl")
         .and_then(Value::as_str)
         .unwrap_or("https://static.solved.ac/misc/360x360/default_profile.png");
 
     let text = format!(
-        "*{handle}*{rank}\n\
-        {tier} 클래스 {class}\n\
-        레이팅 {rating} \\(난이도 {prating}/클래스 {crating}/풀이 {srating}/기여 {vrating}\\)\n\
-        \n\
-        {bio}\n",
-        handle = handle,
+        "{bio}\
+        *{tier}*, 클래스 *{class}*\n\
+        *{rank}*위, *{solve}*문제 해결, *{vote}*문제에 기여, *{rival}*명의 라이벌\n\
+        레이팅 *{rating}* \\(난이도 *{prating}* \\+ 클래스 *{crating}* \\+ 풀이 *{srating}* \\+ 기여 *{vrating}*\\)",
         rank = rank,
         tier = tier,
         class = class_name,
@@ -176,7 +178,10 @@ pub fn user_show_to_message(chat_id: i64, result: Map<String, Value>) -> SendPho
         crating = class_rating,
         srating = solve_rating,
         vrating = vote_rating,
-        bio = escape_markdown_v2(bio),
+        bio = bio,
+        solve = solve_count,
+        vote = vote_count,
+        rival = rival_count
     );
 
     let keyboard = InlineKeyboardMarkup {

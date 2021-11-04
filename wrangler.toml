@@ -3,8 +3,8 @@ type = "javascript"
 workers_dev = true
 compatibility_date = "2021-11-03"
 
-[vars]
-WORKERS_RS_VERSION = "0.0.6"
+[env.development]
+name = "dev-solvedacbot"
 
 [build]
 command = "cargo install -q worker-build && worker-build --release" # required
