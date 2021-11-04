@@ -445,7 +445,7 @@ dependencies = [
 [[package]]
 name = "telbot-cf-worker"
 version = "0.1.0"
-source = "git+https://github.com/kiwiyou/telbot#4189effbb8d08f1fd14a14d9635aeb083c6a5c7c"
+source = "git+https://github.com/kiwiyou/telbot#af41af97dc8e7f175deb3f70bbb2e682bcb8ab99"
 dependencies = [
  "serde",
  "serde_json",
@@ -456,7 +456,7 @@ dependencies = [
 [[package]]
 name = "telbot-types"
 version = "0.1.0"
-source = "git+https://github.com/kiwiyou/telbot#4189effbb8d08f1fd14a14d9635aeb083c6a5c7c"
+source = "git+https://github.com/kiwiyou/telbot#af41af97dc8e7f175deb3f70bbb2e682bcb8ab99"
 dependencies = [
  "serde",
 ]
