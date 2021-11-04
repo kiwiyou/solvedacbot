@@ -2,7 +2,6 @@ name = "solvedacbot"
 type = "javascript"
 workers_dev = true
 compatibility_date = "2021-11-03"
-compatibility_flags = [ "formdata_parser_supports_files" ] # required
 
 [vars]
 WORKERS_RS_VERSION = "0.0.6"
@@ -11,13 +10,13 @@ WORKERS_RS_VERSION = "0.0.6"
 command = "cargo install -q worker-build && worker-build --release" # required
 
 [build.upload]
-dir    = "build/worker"
+dir = "build/worker"
 format = "modules"
-main   = "./shim.mjs"
+main = "./shim.mjs"
 
 [[build.upload.rules]]
 globs = ["**/*.wasm"]
-type  = "CompiledWasm"
+type = "CompiledWasm"
 
 # read more about configuring your Worker via wrangler.toml at:
 # https://developers.cloudflare.com/workers/cli-wrangler/configuration

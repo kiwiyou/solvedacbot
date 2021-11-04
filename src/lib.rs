@@ -1,6 +1,9 @@
-use serde_json::json;
+use telbot_cf_worker::types::query::AnswerInlineQuery;
+use telbot_cf_worker::types::update::*;
 use worker::*;
 
+mod formatter;
+mod solved;
 mod utils;
 
 fn log_request(req: &Request) {
@@ -9,46 +12,50 @@ fn log_request(req: &Request) {
         Date::now().to_string(),
         req.path(),
         req.cf().coordinates().unwrap_or_default(),
-        req.cf().region().unwrap_or("unknown region".into())
+        req.cf().region().unwrap_or_else(|| "unknown region".into())
     );
 }
 
 #[event(fetch)]
 pub async fn main(req: Request, env: Env) -> Result<Response> {
     log_request(&req);
-
-    // Optionally, get more helpful error messages written to the console in the case of a panic.
     utils::set_panic_hook();
-
-    // Optionally, use the Router to handle matching endpoints, use ":name" placeholders, or "*name"
-    // catch-alls to match on specific patterns. Alternatively, use `Router::with_data(D)` to
-    // provide arbitrary data that will be accessible in each route via the `ctx.data()` method.
-    let router = Router::new();
-
-    // Add as many routes as your Worker needs! Each route will get a `Request` for handling HTTP
-    // functionality and a `RouteContext` which you can use to  and get route parameters and
-    // Environment bindings like KV Stores, Durable Objects, Secrets, and Variables.
+    let token = env.secret("BOT_TOKEN")?.to_string();
+    let api = telbot_cf_worker::Api::new(&token);
+    let router = Router::with_data(api);
+    let bot_endpoint = format!("/{}", token);
     router
-        .get("/", |_, _| Response::ok("Hello from Workers!"))
-        .post_async("/form/:field", |mut req, ctx| async move {
-            if let Some(name) = ctx.param("field") {
-                let form = req.form_data().await?;
-                match form.get(name) {
-                    Some(FormEntry::Field(value)) => {
-                        return Response::from_json(&json!({ name: value }))
+        .post_async(&bot_endpoint, |mut req, ctx| async move {
+            let update = req.json::<Update>().await.unwrap();
+            #[allow(clippy::single_match)]
+            match update.kind {
+                UpdateKind::InlineQuery { inline_query } => {
+                    let (page, parity) = match inline_query.offset.parse::<u32>() {
+                        Ok(page) if page > 0 => ((page + 1) / 2, (page + 1) % 2),
+                        _ => (1, 0),
+                    };
+                    let mut result = solved::search_problem(&inline_query.query, page).await?;
+                    let (result, has_next) = if parity == 1 {
+                        if result.len() > 50 {
+                            (&result[50..], result.len() >= 100)
+                        } else {
+                            ([].as_ref(), false)
+                        }
+                    } else {
+                        result.truncate(50);
+                        (&result[..], result.len() >= 50)
+                    };
+                    let response = formatter::search_problem_to_query(result);
+                    let mut answer_query = AnswerInlineQuery::new(inline_query.id, response);
+                    if has_next {
+                        answer_query =
+                            answer_query.with_next_offset((page * 2 + parity).to_string());
                     }
-                    Some(FormEntry::File(_)) => {
-                        return Response::error("`field` param in form shouldn't be a File", 422);
-                    }
-                    None => return Response::error("Bad Request", 400),
+                    ctx.data().send_json(&answer_query).await.unwrap();
                 }
+                _ => {}
             }
-
-            Response::error("Bad Request", 400)
-        })
-        .get("/worker-version", |_, ctx| {
-            let version = ctx.var("WORKERS_RS_VERSION")?.to_string();
-            Response::ok(version)
+            Response::empty()
         })
         .run(req, env)
         .await
