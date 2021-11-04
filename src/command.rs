@@ -25,12 +25,6 @@ impl<'a> Iterator for Args<'a> {
     }
 }
 
-impl Args<'_> {
-    pub fn rest(&self) -> &str {
-        self.inner.trim_start()
-    }
-}
-
 impl<'a> Command<'a> {
     pub fn new(line: &'a str) -> Self {
         let (label_with_username, rest) =
