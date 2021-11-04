@@ -6,8 +6,6 @@ compatibility_date = "2021-11-03"
 [env.development]
 name = "dev-solvedacbot"
 
-[env.production]
-
 [build]
 command = "cargo install -q worker-build && worker-build --release" # required
 
