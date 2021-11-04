@@ -11,6 +11,6 @@ solvedacbot은 [solved.ac](https://solved.ac)의 기능을 텔레그램에서 �
 
 - [x] 인라인 쿼리를 이용해 문제 검색
 
-- [ ] `/problem` 명령어를 이용해 문제 검색
+- [x] `/problem` 명령어를 이용해 문제 검색
 
-- [ ] `/user` 명령어를 이용해 사용자 정보 검색
+- [x] `/user` 명령어를 이용해 사용자 정보 검색
