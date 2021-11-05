@@ -11,11 +11,15 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 cfg-if = "1"
 console_error_panic_hook = "0.1.7"
+image = "0.23.14"
 serde = { version = "1.0.130", features = ["derive"] }
 serde_json = "1.0.67"
-telbot-cf-worker = { git = "https://github.com/kiwiyou/telbot" }
+telbot-cf-worker = { git = "https://github.com/kiwiyou/telbot", branch = "fix-bad-request" }
 web-sys = { version = "0.3.55", features = ["console"] }
-worker = "0.0.6"
+worker = { git = "https://github.com/kiwiyou/workers-rs" }
+
+[patch.crates-io]
+worker = { git = "https://github.com/kiwiyou/workers-rs" }
 
 [profile.release]
 opt-level = "s"

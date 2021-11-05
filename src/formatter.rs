@@ -1,12 +1,15 @@
+use image::ImageFormat;
 use serde_json::{Map, Value};
+use telbot_cf_worker::types::file::InputFile;
 use telbot_cf_worker::types::markup::{
     InlineKeyboardButton, InlineKeyboardButtonKind, InlineKeyboardMarkup, ParseMode,
 };
-use telbot_cf_worker::types::message::{SendMessage, SendPhoto};
+use telbot_cf_worker::types::message::{SendDocument, SendMessage};
 use telbot_cf_worker::types::query::{
     InlineQueryResult, InlineQueryResultKind, InputMessageContent,
 };
 use worker::js_sys::{JsString, RegExp};
+use worker::{Fetch, Method, Request};
 
 pub fn escape_markdown_v2(s: &str) -> String {
     let regex = RegExp::new(r"[_*\[\]()~`>#+-=|\{\}\.!]", "g");
@@ -133,7 +136,10 @@ pub fn problem_show_to_message(chat_id: i64, result: &[Map<String, Value>]) -> S
         .with_parse_mode(ParseMode::MarkdownV2)
 }
 
-pub fn user_show_to_message(chat_id: i64, result: Map<String, Value>) -> SendPhoto {
+pub async fn user_show_to_message(
+    chat_id: i64,
+    result: Map<String, Value>,
+) -> worker::Result<SendDocument> {
     let handle = extract_str_or_na(&result, "handle");
     let rank = extract_u64_or_na(&result, "rank");
     let tier = result
@@ -163,7 +169,32 @@ pub fn user_show_to_message(chat_id: i64, result: Map<String, Value>) -> SendPho
     let profile_image = result
         .get("profileImageUrl")
         .and_then(Value::as_str)
-        .unwrap_or("https://static.solved.ac/misc/360x360/default_profile.png");
+        .map_or_else(
+            || "https://static.solved.ac/misc/360x360/default_profile.png".into(),
+            |url| url.replace("profile/", "profile/360x360/"),
+        );
+
+    let image = Fetch::Request(Request::new(&profile_image, Method::Get)?)
+        .send()
+        .await?
+        .bytes()
+        .await?;
+
+    let png = image::load_from_memory_with_format(&image, image::ImageFormat::Png).unwrap();
+    let mut thumbnail = vec![];
+    png.write_to(&mut thumbnail, ImageFormat::Jpeg).unwrap();
+
+    let profile_image = InputFile {
+        name: handle.to_string(),
+        data: image,
+        mime: "image/png".to_string(),
+    };
+
+    let thumbnail_image = InputFile {
+        name: "thumbnail".to_string(),
+        data: thumbnail,
+        mime: "image/jpg".to_string(),
+    };
 
     let text = format!(
         "{bio}\
@@ -201,10 +232,12 @@ pub fn user_show_to_message(chat_id: i64, result: Map<String, Value>) -> SendPho
         ],
     };
 
-    SendPhoto::new(chat_id, profile_image)
+    let result = SendDocument::new(chat_id, profile_image)
+        .with_thumbnail(thumbnail_image)
         .with_caption(text)
         .with_parse_mode(ParseMode::MarkdownV2)
-        .with_reply_markup(keyboard)
+        .with_reply_markup(keyboard);
+    Ok(result)
 }
 
 fn extract_u64_or_na(map: &Map<String, Value>, key: &str) -> String {

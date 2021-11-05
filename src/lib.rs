@@ -100,7 +100,8 @@ async fn handle_request(mut req: Request, ctx: RouteContext<Api>) -> worker::Res
                         if let Some(handle) = args.next() {
                             let user = solved::user_show(handle).await?;
                             if let Some(user) = user {
-                                let req = formatter::user_show_to_message(message.chat.id, user);
+                                let req =
+                                    formatter::user_show_to_message(message.chat.id, user).await?;
                                 ctx.data().send_file(&req).await.map_err(convert_error)?;
                             } else {
                                 let req =
@@ -128,5 +129,6 @@ fn convert_error(error: telbot_cf_worker::Error) -> worker::Error {
             worker::Error::RustError(format!("Telegram Error: {}", e.description))
         }
         telbot_cf_worker::Error::Worker(e) => e,
+        telbot_cf_worker::Error::Io(e) => worker::Error::RustError(format!("IO Error: {}", e)),
     }
 }
