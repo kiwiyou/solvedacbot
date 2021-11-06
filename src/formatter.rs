@@ -1,4 +1,4 @@
-use image::ImageFormat;
+use image::jpeg::JpegEncoder;
 use serde_json::{Map, Value};
 use telbot_cf_worker::types::file::InputFile;
 use telbot_cf_worker::types::markup::{
@@ -9,7 +9,7 @@ use telbot_cf_worker::types::query::{
     InlineQueryResult, InlineQueryResultKind, InputMessageContent,
 };
 use worker::js_sys::{JsString, RegExp};
-use worker::{Fetch, Method, Request};
+use worker::{CfProperties, Fetch, Method, Request, RequestInit};
 
 pub fn escape_markdown_v2(s: &str) -> String {
     let regex = RegExp::new(r"[_*\[\]()~`>#+-=|\{\}\.!]", "g");
@@ -174,20 +174,31 @@ pub async fn user_show_to_message(
             |url| url.replace("profile/", "profile/360x360/"),
         );
 
-    let image = Fetch::Request(Request::new(&profile_image, Method::Get)?)
-        .send()
-        .await?
-        .bytes()
-        .await?;
+    let image = Fetch::Request(Request::new_with_init(
+        &profile_image,
+        &RequestInit::new()
+            .with_method(Method::Get)
+            .with_cf_properties(CfProperties {
+                cache_everything: Some(true),
+                ..Default::default()
+            }),
+    )?)
+    .send()
+    .await?
+    .bytes()
+    .await?;
 
     let png = image::load_from_memory_with_format(&image, image::ImageFormat::Png).unwrap();
+    let buffer = image::imageops::thumbnail(&png, 256, 256);
     let mut thumbnail = vec![];
-    png.write_to(&mut thumbnail, ImageFormat::Jpeg).unwrap();
+    JpegEncoder::new_with_quality(&mut thumbnail, 50)
+        .encode_image(&buffer)
+        .unwrap();
 
     let profile_image = InputFile {
         name: handle.to_string(),
-        data: image,
-        mime: "image/png".to_string(),
+        data: vec![0],
+        mime: "application/octet-stream".to_string(),
     };
 
     let thumbnail_image = InputFile {
