@@ -3,8 +3,15 @@ type = "javascript"
 workers_dev = true
 compatibility_date = "2021-11-03"
 
+kv_namespaces = [
+    { binding = "PROFILE_IMAGES", id = "735e0eb32ae049998cbbf46339845874", preview_id = "4a3d3fad8d3744ffa532a4e6b26ad8a7" },
+]
+
 [env.development]
 name = "dev-solvedacbot"
+kv_namespaces = [
+    { binding = "PROFILE_IMAGES", preview_id = "4a3d3fad8d3744ffa532a4e6b26ad8a7" },
+]
 
 [build]
 command = "cargo install -q worker-build && worker-build --release" # required

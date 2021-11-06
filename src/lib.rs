@@ -1,5 +1,6 @@
+use db::ProfileImages;
 use std::result::Result;
-use telbot_cf_worker::types::message::{Message, SendMessage};
+use telbot_cf_worker::types::message::{Message, MessageKind, SendMessage};
 use telbot_cf_worker::types::query::AnswerInlineQuery;
 use telbot_cf_worker::types::update::*;
 use telbot_cf_worker::Api;
@@ -9,6 +10,7 @@ use worker::*;
 use crate::command::Command;
 
 mod command;
+mod db;
 mod formatter;
 mod solved;
 mod utils;
@@ -101,9 +103,19 @@ async fn handle_request(mut req: Request, ctx: RouteContext<Api>) -> worker::Res
                         if let Some(handle) = args.next() {
                             let user = solved::user_show(handle).await?;
                             if let Some(user) = user {
-                                let req =
-                                    formatter::user_show_to_message(message.chat.id, user).await?;
-                                ctx.data().send_file(&req).await.map_err(convert_error)?;
+                                let images = ProfileImages::setup(ctx.kv("PROFILE_IMAGES")?);
+                                let profile = images.get_id(handle).await?;
+                                let req = formatter::user_show_to_message(
+                                    message.chat.id,
+                                    user,
+                                    profile.clone().map(Into::into),
+                                )
+                                .await?;
+                                let message =
+                                    ctx.data().send_file(&req).await.map_err(convert_error)?;
+                                if let MessageKind::Document { document, .. } = message.kind {
+                                    images.set_id(handle, &document.file_id).await?;
+                                }
                             } else {
                                 let req =
                                     SendMessage::new(message.chat.id, "사용자를 찾을 수 없습니다.");

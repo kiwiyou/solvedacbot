@@ -809,7 +809,7 @@ dependencies = [
 [[package]]
 name = "telbot-cf-worker"
 version = "0.1.0"
-source = "git+https://github.com/kiwiyou/telbot#ca3041adb60602b7563a12ed559cbbf4ba087d42"
+source = "git+https://github.com/kiwiyou/telbot#956601050c1a102112aa97cb34a199f454ea77f6"
 dependencies = [
  "getrandom",
  "multipart",
@@ -822,7 +822,7 @@ dependencies = [
 [[package]]
 name = "telbot-types"
 version = "0.1.0"
-source = "git+https://github.com/kiwiyou/telbot#ca3041adb60602b7563a12ed559cbbf4ba087d42"
+source = "git+https://github.com/kiwiyou/telbot#956601050c1a102112aa97cb34a199f454ea77f6"
 dependencies = [
  "serde",
 ]
