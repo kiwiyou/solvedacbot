@@ -268,3 +268,28 @@ fn extract_u64_or_na(map: &Map<String, Value>, key: &str) -> String {
 fn extract_str_or_na<'a>(map: &'a Map<String, Value>, key: &str) -> &'a str {
     map.get(key).and_then(Value::as_str).unwrap_or("N/A")
 }
+
+pub fn rating_update_to_message(
+    chat_id: i64,
+    handle: &str,
+    prev: u64,
+    current: Map<String, Value>,
+) -> SendMessage {
+    let (rating, diff) = current.get("rating").and_then(Value::as_u64).map_or_else(
+        || ("N/A".to_string(), 0),
+        |rating| (rating.to_string(), rating as i64 - prev as i64),
+    );
+    let tier = current
+        .get("tier")
+        .and_then(Value::as_u64)
+        .and_then(tier_to_name)
+        .unwrap_or_else(|| "N/A".to_string());
+
+    let text = if diff >= 0 {
+        format!("📈 {} = {} {} (+{})", handle, tier, rating, diff)
+    } else {
+        format!("📉 {} = {} {} ({})", handle, tier, rating, diff)
+    };
+
+    SendMessage::new(chat_id, text)
+}
