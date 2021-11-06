@@ -766,9 +766,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.68"
+version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f690853975602e1bfe1ccbf50504d67174e3bcf340f23b5ea9992e0587a52d8"
+checksum = "e466864e431129c7e0d3476b92f20458e5879919a0596c6472738d9fa2d342f8"
 dependencies = [
  "itoa",
  "ryu",
@@ -809,7 +809,7 @@ dependencies = [
 [[package]]
 name = "telbot-cf-worker"
 version = "0.1.0"
-source = "git+https://github.com/kiwiyou/telbot?branch=fix-bad-request#6b3e2d62a7363295fc9cea056824bf1393c408de"
+source = "git+https://github.com/kiwiyou/telbot#ca3041adb60602b7563a12ed559cbbf4ba087d42"
 dependencies = [
  "getrandom",
  "multipart",
@@ -822,7 +822,7 @@ dependencies = [
 [[package]]
 name = "telbot-types"
 version = "0.1.0"
-source = "git+https://github.com/kiwiyou/telbot?branch=fix-bad-request#6b3e2d62a7363295fc9cea056824bf1393c408de"
+source = "git+https://github.com/kiwiyou/telbot#ca3041adb60602b7563a12ed559cbbf4ba087d42"
 dependencies = [
  "serde",
 ]
@@ -839,6 +839,26 @@ dependencies = [
  "redox_syscall",
  "remove_dir_all",
  "winapi",
+]
+
+[[package]]
+name = "thiserror"
+version = "1.0.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "854babe52e4df1653706b98fcfc05843010039b406875930a70e4d9644e5c417"
+dependencies = [
+ "thiserror-impl",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "1.0.30"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa32fd3f627f367fe16f893e2597ae3c05020f8bba2666a4e6ea73d377e5714b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1060,8 +1080,8 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "worker"
-version = "0.0.6"
-source = "git+https://github.com/kiwiyou/workers-rs#44d760419ebffbf5073893a3ab01b43a0afad1ab"
+version = "0.0.7"
+source = "git+https://github.com/kiwiyou/workers-rs#73f73793607d9914fbe5e271b880fdd487a8777b"
 dependencies = [
  "async-trait",
  "chrono",
@@ -1082,13 +1102,14 @@ dependencies = [
 
 [[package]]
 name = "worker-kv"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6efd1fb8c8e36b99d22a8f77024df57943bd79852e8842731df21292e68aaf93"
+checksum = "e83eabadf47298f90c67f96f59ee98810c21a6ab73e6b7f430183b4ced240cb2"
 dependencies = [
  "js-sys",
  "serde",
  "serde_json",
+ "thiserror",
  "wasm-bindgen",
  "wasm-bindgen-futures",
 ]
@@ -1096,7 +1117,7 @@ dependencies = [
 [[package]]
 name = "worker-macros"
 version = "0.0.2"
-source = "git+https://github.com/kiwiyou/workers-rs#44d760419ebffbf5073893a3ab01b43a0afad1ab"
+source = "git+https://github.com/kiwiyou/workers-rs#73f73793607d9914fbe5e271b880fdd487a8777b"
 dependencies = [
  "async-trait",
  "proc-macro2",
@@ -1111,7 +1132,7 @@ dependencies = [
 [[package]]
 name = "worker-sys"
 version = "0.0.2"
-source = "git+https://github.com/kiwiyou/workers-rs#44d760419ebffbf5073893a3ab01b43a0afad1ab"
+source = "git+https://github.com/kiwiyou/workers-rs#73f73793607d9914fbe5e271b880fdd487a8777b"
 dependencies = [
  "cfg-if 0.1.10",
  "js-sys",
