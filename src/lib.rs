@@ -1,8 +1,9 @@
 use std::result::Result;
-use telbot_cf_worker::types::message::SendMessage;
+use telbot_cf_worker::types::message::{Message, SendMessage};
 use telbot_cf_worker::types::query::AnswerInlineQuery;
 use telbot_cf_worker::types::update::*;
 use telbot_cf_worker::Api;
+use worker::js_sys::{Number, RegExp};
 use worker::*;
 
 use crate::command::Command;
@@ -112,6 +113,28 @@ async fn handle_request(mut req: Request, ctx: RouteContext<Api>) -> worker::Res
                             let help =
                                 SendMessage::new(message.chat.id, "사용법: /user <사용자명>");
                             ctx.data().send_json(&help).await.map_err(convert_error)?;
+                        }
+                    }
+                    "/get" => {
+                        if let Some(reply_to) =
+                            message.reply_to_message.as_deref().and_then(Message::text)
+                        {
+                            let regex = RegExp::new(r"(\d+)번?", "g");
+                            let mut problems = vec![];
+                            while let Some(captures) = regex.exec(reply_to) {
+                                let number = Number::from(captures.get(1)).value_of() as u32;
+                                problems.push(number);
+                            }
+                            if !problems.is_empty() {
+                                let problems = solved::problem_lookup(&problems).await?;
+                                let request =
+                                    formatter::problem_show_to_message(message.chat.id, &problems)
+                                        .reply_to(message.message_id);
+                                ctx.data()
+                                    .send_json(&request)
+                                    .await
+                                    .map_err(convert_error)?;
+                            }
                         }
                     }
                     _ => {}
