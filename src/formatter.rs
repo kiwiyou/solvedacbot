@@ -18,10 +18,10 @@ pub fn escape_markdown_v2(s: &str) -> String {
 
 pub fn level_to_name(level: u64) -> Option<String> {
     match level {
-        0 => Some("Unrated".to_string()),
+        0 => Some("🖤 Unrated".to_string()),
         1..=30 => Some(format!(
             "{} {}",
-            ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Ruby"][(level as usize - 1) / 5],
+            ["🤎 Bronze", "🤍 Silver", "💛 Gold", "💚 Platinum", "💙 Diamond", "❤️ Ruby"][(level as usize - 1) / 5],
             ["V", "IV", "III", "II", "I"][(level as usize - 1) % 5]
         )),
         _ => None,
@@ -30,13 +30,13 @@ pub fn level_to_name(level: u64) -> Option<String> {
 
 pub fn tier_to_name(level: u64) -> Option<String> {
     match level {
-        0 => Some("Unranked".to_string()),
+        0 => Some("🖤 Unranked".to_string()),
         1..=30 => Some(format!(
             "{} {}",
-            ["Bronze", "Silver", "Gold", "Platinum", "Diamond", "Ruby"][(level as usize - 1) / 5],
+            ["🤎 Bronze", "🤍 Silver", "💛 Gold", "💚 Platinum", "💙 Diamond", "❤️ Ruby"][(level as usize - 1) / 5],
             ["V", "IV", "III", "II", "I"][(level as usize - 1) % 5]
         )),
-        31 => Some("Master".to_string()),
+        31 => Some("💜 Master".to_string()),
         _ => None,
     }
 }
