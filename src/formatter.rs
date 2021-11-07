@@ -1,6 +1,6 @@
 use image::jpeg::JpegEncoder;
 use serde_json::{Map, Value};
-use telbot_cf_worker::types::file::InputFile;
+use telbot_cf_worker::types::file::{InputFile, InputFileVariant};
 use telbot_cf_worker::types::markup::{
     InlineKeyboardButton, InlineKeyboardButtonKind, InlineKeyboardMarkup, ParseMode,
 };
@@ -139,6 +139,7 @@ pub fn problem_show_to_message(chat_id: i64, result: &[Map<String, Value>]) -> S
 pub async fn user_show_to_message(
     chat_id: i64,
     result: Map<String, Value>,
+    file: Option<InputFileVariant>,
 ) -> worker::Result<SendDocument> {
     let handle = extract_str_or_na(&result, "handle");
     let rank = extract_u64_or_na(&result, "rank");
@@ -166,45 +167,51 @@ pub async fn user_show_to_message(
     let solve_count = extract_u64_or_na(&result, "solvedCount");
     let vote_count = extract_u64_or_na(&result, "voteCount");
     let rival_count = extract_u64_or_na(&result, "rivalCount");
-    let profile_image = result
-        .get("profileImageUrl")
-        .and_then(Value::as_str)
-        .map_or_else(
-            || "https://static.solved.ac/misc/360x360/default_profile.png".into(),
-            |url| url.replace("profile/", "profile/360x360/"),
-        );
 
-    let image = Fetch::Request(Request::new_with_init(
-        &profile_image,
-        &RequestInit::new()
-            .with_method(Method::Get)
-            .with_cf_properties(CfProperties {
-                cache_everything: Some(true),
-                ..Default::default()
-            }),
-    )?)
-    .send()
-    .await?
-    .bytes()
-    .await?;
+    let (profile, thumbnail) = if let Some(file) = file {
+        (file, None)
+    } else {
+        let profile_image = result
+            .get("profileImageUrl")
+            .and_then(Value::as_str)
+            .map_or_else(
+                || "https://static.solved.ac/misc/360x360/default_profile.png".into(),
+                |url| url.replace("profile/", "profile/360x360/"),
+            );
 
-    let png = image::load_from_memory_with_format(&image, image::ImageFormat::Png).unwrap();
-    let buffer = image::imageops::thumbnail(&png, 256, 256);
-    let mut thumbnail = vec![];
-    JpegEncoder::new_with_quality(&mut thumbnail, 50)
-        .encode_image(&buffer)
-        .unwrap();
+        let image = Fetch::Request(Request::new_with_init(
+            &profile_image,
+            &RequestInit::new()
+                .with_method(Method::Get)
+                .with_cf_properties(CfProperties {
+                    cache_everything: Some(true),
+                    ..Default::default()
+                }),
+        )?)
+        .send()
+        .await?
+        .bytes()
+        .await?;
 
-    let profile_image = InputFile {
-        name: handle.to_string(),
-        data: vec![0],
-        mime: "application/octet-stream".to_string(),
-    };
+        let png = image::load_from_memory_with_format(&image, image::ImageFormat::Png).unwrap();
+        let buffer = image::imageops::thumbnail(&png, 256, 256);
+        let mut thumbnail = vec![];
+        JpegEncoder::new_with_quality(&mut thumbnail, 50)
+            .encode_image(&buffer)
+            .unwrap();
 
-    let thumbnail_image = InputFile {
-        name: "thumbnail".to_string(),
-        data: thumbnail,
-        mime: "image/jpg".to_string(),
+        let profile_image = InputFile {
+            name: handle.to_string(),
+            data: vec![0],
+            mime: "application/octet-stream".to_string(),
+        };
+
+        let thumbnail_image = InputFile {
+            name: "thumbnail".to_string(),
+            data: thumbnail,
+            mime: "image/jpg".to_string(),
+        };
+        (profile_image.into(), Some(thumbnail_image.into()))
     };
 
     let text = format!(
@@ -243,11 +250,11 @@ pub async fn user_show_to_message(
         ],
     };
 
-    let result = SendDocument::new(chat_id, profile_image)
-        .with_thumbnail(thumbnail_image)
+    let mut result = SendDocument::new(chat_id, profile)
         .with_caption(text)
         .with_parse_mode(ParseMode::MarkdownV2)
         .with_reply_markup(keyboard);
+    result.thumb = thumbnail;
     Ok(result)
 }
 
@@ -260,4 +267,29 @@ fn extract_u64_or_na(map: &Map<String, Value>, key: &str) -> String {
 
 fn extract_str_or_na<'a>(map: &'a Map<String, Value>, key: &str) -> &'a str {
     map.get(key).and_then(Value::as_str).unwrap_or("N/A")
+}
+
+pub fn rating_update_to_message(
+    chat_id: i64,
+    handle: &str,
+    prev: u64,
+    current: Map<String, Value>,
+) -> SendMessage {
+    let (rating, diff) = current.get("rating").and_then(Value::as_u64).map_or_else(
+        || ("N/A".to_string(), 0),
+        |rating| (rating.to_string(), rating as i64 - prev as i64),
+    );
+    let tier = current
+        .get("tier")
+        .and_then(Value::as_u64)
+        .and_then(tier_to_name)
+        .unwrap_or_else(|| "N/A".to_string());
+
+    let text = if diff >= 0 {
+        format!("📈 {} = {} {} (+{})", handle, tier, rating, diff)
+    } else {
+        format!("📉 {} = {} {} ({})", handle, tier, rating, diff)
+    };
+
+    SendMessage::new(chat_id, text)
 }

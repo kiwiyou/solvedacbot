@@ -3,8 +3,17 @@ type = "javascript"
 workers_dev = true
 compatibility_date = "2021-11-03"
 
+kv_namespaces = [
+    { binding = "RATING_ALARMS", id = "", preview_id = "" },
+    { binding = "PROFILE_IMAGES", id = "", preview_id = "" },
+]
+
 [env.development]
 name = "dev-solvedacbot"
+kv_namespaces = [
+    { binding = "PROFILE_IMAGES", preview_id = "" },
+    { binding = "RATING_ALARMS", preview_id = "" },
+]
 
 [build]
 command = "cargo install -q worker-build && worker-build --release" # required

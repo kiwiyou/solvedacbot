@@ -1,5 +1,8 @@
+use db::ProfileImages;
+use serde_json::Value;
 use std::result::Result;
-use telbot_cf_worker::types::message::{Message, SendMessage};
+use telbot_cf_worker::types::markup::ParseMode;
+use telbot_cf_worker::types::message::{Message, MessageKind, SendMessage};
 use telbot_cf_worker::types::query::AnswerInlineQuery;
 use telbot_cf_worker::types::update::*;
 use telbot_cf_worker::Api;
@@ -7,8 +10,10 @@ use worker::js_sys::{Number, RegExp};
 use worker::*;
 
 use crate::command::Command;
+use crate::db::RatingAlarms;
 
 mod command;
+mod db;
 mod formatter;
 mod solved;
 mod utils;
@@ -31,10 +36,36 @@ pub async fn main(req: Request, env: Env) -> worker::Result<Response> {
     let api = telbot_cf_worker::Api::new(&token);
     let router = Router::with_data(api);
     let bot_endpoint = format!("/{}", token);
+    let rating_endpoint = format!("/rating/{}", token);
     router
-        .post_async(&bot_endpoint, |req, ctx| async move {
+        .post_async(&bot_endpoint, |req, ctx| async {
             if let Err(e) = handle_request(req, ctx).await {
                 web_sys::console::error_1(&e.to_string().into());
+            }
+            Response::empty()
+        })
+        .get_async(&rating_endpoint, |_, ctx| async move {
+            let ratings = RatingAlarms::setup(ctx.kv("RATING_ALARMS")?);
+            for subscriber in ratings.all_subscribers().await? {
+                if let Some(rating) = ratings.get_subscription(subscriber).await? {
+                    if let Some(user_info) = solved::user_show(&rating.target).await? {
+                        let new_rating = user_info.get("rating").unwrap().as_u64().unwrap();
+                        if rating.rating != new_rating {
+                            ctx.data()
+                                .send_json(&formatter::rating_update_to_message(
+                                    subscriber,
+                                    &rating.target,
+                                    rating.rating,
+                                    user_info,
+                                ))
+                                .await
+                                .map_err(convert_error)?;
+                            ratings
+                                .set_subscription(subscriber, rating.target, new_rating)
+                                .await?;
+                        }
+                    }
+                }
             }
             Response::empty()
         })
@@ -101,9 +132,19 @@ async fn handle_request(mut req: Request, ctx: RouteContext<Api>) -> worker::Res
                         if let Some(handle) = args.next() {
                             let user = solved::user_show(handle).await?;
                             if let Some(user) = user {
-                                let req =
-                                    formatter::user_show_to_message(message.chat.id, user).await?;
-                                ctx.data().send_file(&req).await.map_err(convert_error)?;
+                                let images = ProfileImages::setup(ctx.kv("PROFILE_IMAGES")?);
+                                let profile = images.get_id(handle).await?;
+                                let req = formatter::user_show_to_message(
+                                    message.chat.id,
+                                    user,
+                                    profile.clone().map(Into::into),
+                                )
+                                .await?;
+                                let message =
+                                    ctx.data().send_file(&req).await.map_err(convert_error)?;
+                                if let MessageKind::Document { document, .. } = message.kind {
+                                    images.set_id(handle, &document.file_id).await?;
+                                }
                             } else {
                                 let req =
                                     SendMessage::new(message.chat.id, "사용자를 찾을 수 없습니다.");
@@ -137,6 +178,70 @@ async fn handle_request(mut req: Request, ctx: RouteContext<Api>) -> worker::Res
                             }
                         }
                     }
+                    "/subscribe" => match args.next() {
+                        Some("ratings") => {
+                            if let Some(handle) = args.next() {
+                                let ratings = RatingAlarms::setup(ctx.kv("RATING_ALARMS")?);
+                                if let Some(user) = solved::user_show(handle).await? {
+                                    ratings
+                                        .set_subscription(
+                                            message.chat.id,
+                                            handle,
+                                            user.get("rating").and_then(Value::as_u64).unwrap(),
+                                        )
+                                        .await?;
+
+                                    let success = SendMessage::new(
+                                        message.chat.id,
+                                        format!("*{}*님의 레이팅 변화를 구독했습니다\\.", handle),
+                                    )
+                                    .with_parse_mode(ParseMode::MarkdownV2);
+                                    ctx.data()
+                                        .send_json(&success)
+                                        .await
+                                        .map_err(convert_error)?;
+                                } else {
+                                    let error = SendMessage::new(
+                                        message.chat.id,
+                                        "사용자를 찾을 수 없습니다.",
+                                    );
+                                    ctx.data().send_json(&error).await.map_err(convert_error)?;
+                                }
+                            } else {
+                                let help = SendMessage::new(
+                                    message.chat.id,
+                                    "사용법: /subscribe ratings <사용자명>",
+                                );
+                                ctx.data().send_json(&help).await.map_err(convert_error)?;
+                            }
+                        }
+                        _ => {
+                            let help = SendMessage::new(
+                                message.chat.id,
+                                "사용법: /subscribe ratings <사용자명>",
+                            );
+                            ctx.data().send_json(&help).await.map_err(convert_error)?;
+                        }
+                    },
+                    "/unsubscribe" => match args.next() {
+                        Some("ratings") => {
+                            let ratings = RatingAlarms::setup(ctx.kv("RATING_ALARMS")?);
+                            ratings.unsubscribe(message.chat.id).await?;
+                            let success = SendMessage::new(
+                                message.chat.id,
+                                "레이팅 변화 구독이 취소되었습니다.",
+                            );
+                            ctx.data()
+                                .send_json(&success)
+                                .await
+                                .map_err(convert_error)?;
+                        }
+                        _ => {
+                            let help =
+                                SendMessage::new(message.chat.id, "사용법: /unsubscribe ratings");
+                            ctx.data().send_json(&help).await.map_err(convert_error)?;
+                        }
+                    },
                     _ => {}
                 }
             }

@@ -14,7 +14,7 @@ console_error_panic_hook = "0.1.7"
 image = "0.23.14"
 serde = { version = "1.0.130", features = ["derive"] }
 serde_json = "1.0.67"
-telbot-cf-worker = { git = "https://github.com/kiwiyou/telbot", branch = "fix-bad-request" }
+telbot-cf-worker = { git = "https://github.com/kiwiyou/telbot" }
 web-sys = { version = "0.3.55", features = ["console"] }
 worker = { git = "https://github.com/kiwiyou/workers-rs" }
 
