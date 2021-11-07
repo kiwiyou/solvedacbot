@@ -154,7 +154,7 @@ pub async fn user_show_to_message(
         .and_then(|class| class_to_name(class, class_deco))
         .unwrap_or_else(|| "N/A".to_string());
     let rating = extract_u64_or_na(&result, "rating");
-    let problem_rating = extract_u64_or_na(&result, "rating");
+    let problem_rating = extract_u64_or_na(&result, "ratingByProblemsSum");
     let class_rating = extract_u64_or_na(&result, "ratingByClass");
     let solve_rating = extract_u64_or_na(&result, "ratingBySolvedCount");
     let vote_rating = extract_u64_or_na(&result, "ratingByVoteCount");
